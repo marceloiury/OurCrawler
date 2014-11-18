@@ -4,7 +4,6 @@ Created on 12/11/2014
 @author: Marcelo
 '''
 
-import byterange
 import requests
 import time
 import urllib2
@@ -154,14 +153,11 @@ def downloadFile(url, filePath):
     tries = 0;
     timeoutValue = 60;
     while True:
-        #try:
+        try:
             print 'Downloading try #' + str(tries) 
-            loop = 1
             existSize = 0
-            file_name = url.split('/')[-1]
             
-            
-            range_handler = range.HTTPRangeHandler()
+            range_handler = HTTPRangeHandler()
             opener = urllib2.build_opener(range_handler)
         
             # install it
@@ -170,50 +166,39 @@ def downloadFile(url, filePath):
             # create Request and set Range header
             req = urllib2.Request(url)
             
-            
-            if os.path.exists(filePath):
-                outputFile = open(filePath,"ab")
-                existSize = os.path.getsize(filePath)
-                #myUrlclass.addheader("Range","bytes=%s-" % (existSize))
-                req.header['Range'] = "bytes=%s-" % (existSize)
-            else:
-                outputFile = open(filePath,"wb")
-    
-            #fileDownloadChannel = myUrlclass.open(url, timeout=timeoutValue)
-            
-            fileDownloadChannel = urllib2.urlopen(req, timeout=timeoutValue)
-
-            
-
             file_size = getFile2DownloadSize(url)
             print "Downloading: %s Bytes: %s" % (filePath, file_size)
+            
+            if os.path.exists(filePath):
+                existSize = os.path.getsize(filePath)
+                if int(file_size) == existSize:
+                    print 'File already downloaded'
+                    return
+                try :
+                    req.header['Range'] = "bytes=%s-" % (existSize)
+                    outputFile = open(filePath,"ab")
+                except:
+                    outputFile = open(filePath,"wb")
+            else:
+                outputFile = open(filePath,"wb")
+                
+    
+            fileDownloadChannel = urllib2.urlopen(req, timeout=timeoutValue)
 
-            if int(file_size) == existSize:
-                loop = 0
-                print "File already downloaded"
-            
-            numBytes = 0
-            while loop:
-                print 1
-                data = fileDownloadChannel.read(8192*10)
-                if not data:
-                    break
-                print 2
-                outputFile.write(data)
-                print 3
-                numBytes = numBytes + len(data)
-                print 4
-                status = r"%10d  [%3.2f%%]" % (numBytes, numBytes * 100. / file_size)
-                status = status + chr(8) * (len(status) + 1)
-                print status,
-            
+            data = fileDownloadChannel.read()
+            outputFile.write(data)
             fileDownloadChannel.close()
             outputFile.close()
             
-            f.close()
             break
        
-       
+        except :
+            print 'Failed',  sys.exc_info()[0]
+            tries += 1
+            timeoutValue *= tries
+            if tries >= 10:
+                exit()
+   
 
 
 def getDatasets(portalUrl, datasetDataFile):
@@ -226,7 +211,7 @@ def getDatasets(portalUrl, datasetDataFile):
         #print '\n\n\n'+ datasetName;
         #print portalURL+'/api/rest/package/'+datasetName
         
-        if (datasetID < 52):
+        if (datasetID < 55):
             continue
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
