@@ -4,9 +4,11 @@ Created on 12/11/2014
 @author: Marcelo
 '''
 
+import byterange
 import requests
 import time
 import urllib2
+import urllib
 
 import json
 import os
@@ -14,8 +16,28 @@ import csv
 import codecs
 import sys
 
-  
 
+
+class myURLOpener(urllib.FancyURLopener):
+    """Create sub-class in order to overide error 206.  This error means a
+       partial file is being sent,
+       which is ok in this case.  Do nothing with this error.
+    """
+    def http_error_206(self, url, fp, errcode, errmsg, headers, data=None):
+        pass
+
+class HTTPRangeHandler(urllib2.BaseHandler):
+    def http_error_206(self, req, fp, code, msg, hdrs):
+        # 206 Partial Content Response
+        r = urllib.addinfourl(fp, hdrs, req.get_full_url())
+        r.code = code
+        r.msg = msg
+        return r
+    
+    def http_error_416(self, req, fp, code, msg, hdrs):
+        # HTTP's Range Not Satisfiable error
+        raise RangeError('Requested Range Not Satisfiable')
+    
 def tab (valor):
     if (valor == None) : 
         return "\t";
@@ -118,40 +140,80 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
     else :
         return results['result'];
 
+
+def getFile2DownloadSize(url):
+    u = urllib2.urlopen(url, timeout=10)
+    meta = u.info()
+    file_size = int(meta.getheaders("Content-Length")[0])
+    f.close()
+    return file_size
+
+
+
 def downloadFile(url, filePath):
     tries = 0;
     timeoutValue = 60;
     while True:
-        try:
+        #try:
             print 'Downloading try #' + str(tries) 
+            loop = 1
+            existSize = 0
             file_name = url.split('/')[-1]
-            u = urllib2.urlopen(url, timeout=timeoutValue)
-            f = open(filePath, 'wb')
-            meta = u.info()
-            file_size = int(meta.getheaders("Content-Length")[0])
-            print "Downloading: %s Bytes: %s" % (file_name, file_size)
-        
-            file_size_dl = 0
-            block_sz = 8192 * 100;
-            while True:
-                buffer = u.read(block_sz)
-                if not buffer:
-                    break
             
-                file_size_dl += len(buffer)
-                f.write(buffer)
-                status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+            
+            range_handler = range.HTTPRangeHandler()
+            opener = urllib2.build_opener(range_handler)
+        
+            # install it
+            urllib2.install_opener(opener)
+        
+            # create Request and set Range header
+            req = urllib2.Request(url)
+            
+            
+            if os.path.exists(filePath):
+                outputFile = open(filePath,"ab")
+                existSize = os.path.getsize(filePath)
+                #myUrlclass.addheader("Range","bytes=%s-" % (existSize))
+                req.header['Range'] = "bytes=%s-" % (existSize)
+            else:
+                outputFile = open(filePath,"wb")
+    
+            #fileDownloadChannel = myUrlclass.open(url, timeout=timeoutValue)
+            
+            fileDownloadChannel = urllib2.urlopen(req, timeout=timeoutValue)
+
+            
+
+            file_size = getFile2DownloadSize(url)
+            print "Downloading: %s Bytes: %s" % (filePath, file_size)
+
+            if int(file_size) == existSize:
+                loop = 0
+                print "File already downloaded"
+            
+            numBytes = 0
+            while loop:
+                print 1
+                data = fileDownloadChannel.read(8192*10)
+                if not data:
+                    break
+                print 2
+                outputFile.write(data)
+                print 3
+                numBytes = numBytes + len(data)
+                print 4
+                status = r"%10d  [%3.2f%%]" % (numBytes, numBytes * 100. / file_size)
                 status = status + chr(8) * (len(status) + 1)
                 print status,
             
+            fileDownloadChannel.close()
+            outputFile.close()
+            
             f.close()
             break
-        except :
-            print 'Failed',  sys.exc_info()[0]
-            tries += 1
-            timeoutValue *= tries
-            if tries >= 10:
-                exit()
+       
+       
 
 
 def getDatasets(portalUrl, datasetDataFile):
@@ -164,7 +226,7 @@ def getDatasets(portalUrl, datasetDataFile):
         #print '\n\n\n'+ datasetName;
         #print portalURL+'/api/rest/package/'+datasetName
         
-        if (datasetID < 41):
+        if (datasetID < 52):
             continue
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
