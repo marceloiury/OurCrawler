@@ -83,7 +83,7 @@ def getDatasetList(portalUrl, ckanVersion):
     if (ckanVersion == 1):
         actionURL = portalUrl+'/api/rest/package'
     elif (ckanVersion == 2) :
-        actionURL = portalUrl+'/api/2/action/package_list'
+        actionURL = portalUrl+'/api/action/package_list'
     else :
         actionURL = portalUrl+'/api/action/package_list'
     
@@ -235,7 +235,7 @@ def getDatasets(portalUrl, datasetDataFile):
             fileName = removeAccents(fileName) 
 
             
-            #Como não vamos baixar o dataset, escrevi comentei a funcao de download, e coloquei a chamada da funcao que baixa o tamanho do dataset
+            #Como nao vamos baixar o dataset, escrevi comentei a funcao de download, e coloquei a chamada da funcao que baixa o tamanho do dataset
             #downloadFile(datasetUrl, fileName)
             #size = os.path.getsize( fileName )
             
