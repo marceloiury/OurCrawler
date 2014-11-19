@@ -209,7 +209,9 @@ def getDatasets(portalUrl, datasetDataFile):
             text += tab(portalUrl);
             text += tab(datasetID);
             text += tab(datasetMetaData['name']);
+            text += tab(datasetMetaData['title']);
             text += tab(resource['name']);
+            text += tab(resource['id']);
             text += tab(resource['url']);
             text += tab(cleanText(resource['description']))
             text += tab(resource['format']);
@@ -217,11 +219,16 @@ def getDatasets(portalUrl, datasetDataFile):
             text += tab(resource['created']);
             text += tab(datasetMetaData['maintainer']);
             text += tab(datasetMetaData['maintainer_email']);
+            text += tab(datasetMetaData['author']);
+            text += tab(datasetMetaData['author_email']);
+            text += tab(datasetMetaData['state']);
+            text += tab(datasetMetaData['isopen']);
             text += tab(datasetMetaData['metadata_created']);
             text += tab(datasetMetaData['metadata_modified']);
             text += tab(datasetMetaData['groups']);
             text += tab(datasetMetaData['tags']);
             text += tab(datasetMetaData['license_title']);
+            text += tab(resource['size']);
             
             datasetUrl = resource['url'];
             fileName =  datasetFolder +"/" + unicode(resource['name'].replace('/','-'))+  '.'+resource['format']
