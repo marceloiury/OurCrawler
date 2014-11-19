@@ -239,7 +239,7 @@ def getDatasets(portalUrl, datasetDataFile):
             #downloadFile(datasetUrl, fileName)
             #size = os.path.getsize( fileName )
             
-            size = getFile2DownloadSize(url)
+            size = getFile2DownloadSize(datasetUrl)
             text += tab(size);
             
             print text;
