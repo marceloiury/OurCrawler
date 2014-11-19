@@ -4,11 +4,12 @@ Created on 12/11/2014
 @author: Marcelo
 '''
 
+import unicodedata
 import requests
 import time
 import urllib2
 import urllib
-
+import socket
 import json
 import os
 import csv
@@ -53,9 +54,12 @@ def normalizeURL(url):
         return url[0:length-1];
     else:
         return url;
+
+def removeAccents(input_str):
+    nkfd_form = unicodedata.normalize('NFKD', input_str)
+    return u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
     
 def cleanText(text):
-    #text = text.encode('utf-8')
     text = text.replace('\n', '')
     text = text.replace('\t', '')
     text = text.replace('\r', '')
@@ -64,11 +68,13 @@ def cleanText(text):
     
 def getCKANVersion(portalUrl):
     fp = urllib2.urlopen(portalUrl+'/api/util/status');
+    
+    print portalUrl+'/api/util/status'
     result = json.loads(fp.read());
     fp.close();
     version = result['ckan_version'];
     print version;
-    return version[0]
+    return int(version[0])
 
 
 def getDatasetList(portalUrl, ckanVersion):
@@ -83,11 +89,8 @@ def getDatasetList(portalUrl, ckanVersion):
     
     print actionURL
     fp = urllib2.urlopen(actionURL);
-    print 'OPENED ' + actionURL
     results = json.loads(fp.read());
-    print 'LOADED ' + actionURL
     fp.close();
-    print 'OK ' + actionURL
     
     if (ckanVersion == 1):
         return results
@@ -104,36 +107,19 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
     else :
         actionURL = portalUrl+'/api/3/action/package_show?id='+datasetName
     
-
-    # Try three times to make contact
     tries = 0;
     results = None;
     while True:
         try:
-            # Connect to API 
             connection = urllib2.urlopen(actionURL, timeout=60)
-            print 'open ' + actionURL
             xmlstring = connection.read()
-            print 'read ' + actionURL
             results = json.loads(xmlstring);
-            
             break
         except :
             tries += 1
             if tries >= 10:
                 exit()
     
-    
-    #print actionURL
-    #fp = urllib2.urlopen(actionURL);
-    #print 'opened ' + actionURL
-    #t = fp.read()
-    #print 'read ' + actionURL
-    #results = json.loads(t);
-    print 'loaded ' + actionURL
-    #fp.close();
-    
-    print 'OK ' + actionURL
     if (ckanVersion == 1):
         return results
     else :
@@ -141,12 +127,14 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
 
 
 def getFile2DownloadSize(url):
-    u = urllib2.urlopen(url, timeout=10)
+    u = urllib2.urlopen(url, timeout=60)
     meta = u.info()
-    file_size = int(meta.getheaders("Content-Length")[0])
+    file_size = 0;
+
+    if (len(meta.getheaders("Content-Length")) > 0) :         
+        file_size = int(meta.getheaders("Content-Length")[0])
     f.close()
     return file_size
-
 
 
 def downloadFile(url, filePath):
@@ -160,10 +148,7 @@ def downloadFile(url, filePath):
             range_handler = HTTPRangeHandler()
             opener = urllib2.build_opener(range_handler)
         
-            # install it
             urllib2.install_opener(opener)
-        
-            # create Request and set Range header
             req = urllib2.Request(url)
             
             file_size = getFile2DownloadSize(url)
@@ -171,7 +156,7 @@ def downloadFile(url, filePath):
             
             if os.path.exists(filePath):
                 existSize = os.path.getsize(filePath)
-                if int(file_size) == existSize:
+                if ((file_size == existSize)  and  (file_size != 0 )):
                     print 'File already downloaded'
                     return
                 try :
@@ -182,7 +167,7 @@ def downloadFile(url, filePath):
             else:
                 outputFile = open(filePath,"wb")
                 
-    
+            socket.setdefaulttimeout(timeoutValue)
             fileDownloadChannel = urllib2.urlopen(req, timeout=timeoutValue)
 
             data = fileDownloadChannel.read()
@@ -193,10 +178,10 @@ def downloadFile(url, filePath):
             break
        
         except :
-            print 'Failed',  sys.exc_info()[0]
+            print timeoutValue
             tries += 1
-            timeoutValue *= tries
-            if tries >= 10:
+            timeoutValue += 20
+            if tries >= 25:
                 exit()
    
 
@@ -208,11 +193,6 @@ def getDatasets(portalUrl, datasetDataFile):
     datasetID = 0
     for datasetName in results:
         datasetID += 1;
-        #print '\n\n\n'+ datasetName;
-        #print portalURL+'/api/rest/package/'+datasetName
-        
-        if (datasetID < 55):
-            continue
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
         resources = datasetMetaData['resources'];
@@ -223,9 +203,6 @@ def getDatasets(portalUrl, datasetDataFile):
     
             
         for resource in resources:
-            
-            cleanText(resource['description'])
-            
             text = "";
             text += tab(portalId);
             text += tab(portalName);
@@ -247,15 +224,15 @@ def getDatasets(portalUrl, datasetDataFile):
             text += tab(datasetMetaData['license_title']);
             
             datasetUrl = resource['url'];
+            fileName =  datasetFolder +"/" + unicode(resource['name'].replace('/','-'))+  '.'+resource['format']
+            fileName = removeAccents(fileName) 
+
             
-            print 'init download ' + datasetUrl
-            fileName =  datasetFolder +"/" + resource['name']+'.'+resource['format']
-            downloadFile(datasetUrl, fileName)
+            #Como não vamos baixar o dataset, escrevi comentei a funcao de download, e coloquei a chamada da funcao que baixa o tamanho do dataset
+            #downloadFile(datasetUrl, fileName)
+            #size = os.path.getsize( fileName )
             
-            print 'downloaded ' + datasetUrl
-            
-            
-            size = os.path.getsize( fileName ) 
+            size = getFile2DownloadSize(url)
             text += tab(size);
             
             print text;
@@ -265,24 +242,20 @@ def getDatasets(portalUrl, datasetDataFile):
 
 
 
-
 with open('portais.dat', 'r') as f:
     reader = csv.reader(f, dialect='excel', delimiter='\t')
-    print sys.stdin.encoding
     
+    i = 0
     for row in reader:
+        
         portalId = row[0];
         portalName = row[1];
         portalUrl = normalizeURL(row[2]);
         
-        millis = int(round(time.time() * 1000)) 
-        
         portalDatasetsFolders = "datasets/" +portalId.zfill(2);
 
-        #arq = open("datasetData.dat", "a+");        
         with codecs.open('datasetData.dat', 'a+', encoding='utf-8') as arq: 
         
-            #Folder to store datasets from current portal 
             if not os.path.exists(portalDatasetsFolders):
                 os.makedirs(portalDatasetsFolders);
             
@@ -290,7 +263,6 @@ with open('portais.dat', 'r') as f:
     
             getDatasets(portalUrl, arq);
          
-        #arq.close();
         
 
 
