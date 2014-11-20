@@ -249,32 +249,39 @@ def getDatasets(portalUrl, datasetDataFile):
 
 
 
-with open('portais.dat', 'r') as f:
-    reader = csv.reader(f, dialect='excel', delimiter='\t')
-    
-    i = 0
-    for row in reader:
-        
-        portalId = row[0];
-        portalName = row[1];
-        portalUrl = normalizeURL(row[2]);
-        
-        portalDatasetsFolders = "datasets/" +portalId.zfill(2);
 
-        with codecs.open('datasetData.dat', 'a+', encoding='utf-8') as arq: 
-        
-            if not os.path.exists(portalDatasetsFolders):
-                os.makedirs(portalDatasetsFolders);
-            
-            print portalUrl+'/api/rest/package';
+#with open('portais.dat', 'r') as f:
+f = open('portais.dat', 'r')
+reader = csv.reader(f, dialect='excel', delimiter='\t')
+
+i = 0
+for row in reader:
+    if (i < 1):
+        i+=1
+        continue
     
-            getDatasets(portalUrl, arq);
-         
+    portalId = row[0];
+    portalName = row[1];
+    portalUrl = normalizeURL(row[2]);
+    
+    portalDatasetsFolders = "datasets/" +portalId.zfill(2);
+
+    with codecs.open('datasetData.dat', 'a+', encoding='utf-8') as arq: 
+    
+        if not os.path.exists(portalDatasetsFolders):
+            os.makedirs(portalDatasetsFolders);
         
+        print portalUrl+'/api/rest/package';
+
+        getDatasets(portalUrl, arq);
+        
+f.close()
+     
+    
 
 
-    
-    
-    
-    
-    
+
+
+
+
+
