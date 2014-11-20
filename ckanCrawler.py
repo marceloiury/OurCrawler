@@ -127,15 +127,13 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
 
 
 def getFile2DownloadSize(url):
+    file_size = 0;
     u = urllib2.urlopen(url, timeout=60)
     meta = u.info()
-    file_size = 0;
-
     if (len(meta.getheaders("Content-Length")) > 0) :         
         file_size = int(meta.getheaders("Content-Length")[0])
     f.close()
     return file_size
-
 
 def downloadFile(url, filePath):
     tries = 0;
@@ -193,6 +191,8 @@ def getDatasets(portalUrl, datasetDataFile):
     datasetID = 0
     for datasetName in results:
         datasetID += 1;
+        if (datasetID < 195) :
+            continue
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
         resources = datasetMetaData['resources'];
@@ -238,9 +238,12 @@ def getDatasets(portalUrl, datasetDataFile):
             #Como nao vamos baixar o dataset, escrevi comentei a funcao de download, e coloquei a chamada da funcao que baixa o tamanho do dataset
             #downloadFile(datasetUrl, fileName)
             #size = os.path.getsize( fileName )
-            
-            size = getFile2DownloadSize(datasetUrl)
-            text += tab(size);
+            print '#' + datasetUrl + '#'
+            try :
+                size = getFile2DownloadSize(datasetUrl)
+                text += tab(size);
+            except:
+                text += tab('FALHOU');
             
             print text;
             datasetDataFile.write(text + "\n")
