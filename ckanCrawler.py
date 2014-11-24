@@ -15,6 +15,7 @@ import os
 import csv
 import codecs
 import sys
+from types import NoneType
 
 
 
@@ -54,6 +55,11 @@ def normalizeURL(url):
         return url[0:length-1];
     else:
         return url;
+def normalizeFileName(resource):
+    if (resource['name'] == None):
+        return resource['id'] 
+    else :
+        return resource['name'].replace('/','-')
 
 def removeAccents(input_str):
     nkfd_form = unicodedata.normalize('NFKD', input_str)
@@ -69,16 +75,13 @@ def cleanText(text):
 def getCKANVersion(portalUrl):
     fp = urllib2.urlopen(portalUrl+'/api/util/status');
     
-    print portalUrl+'/api/util/status'
     result = json.loads(fp.read());
     fp.close();
     version = result['ckan_version'];
-    print version;
     return int(version[0])
 
 
 def getDatasetList(portalUrl, ckanVersion):
-    print ckanVersion
     actionURL = ''
     if (ckanVersion == 1):
         actionURL = portalUrl+'/api/rest/package'
@@ -87,7 +90,6 @@ def getDatasetList(portalUrl, ckanVersion):
     else :
         actionURL = portalUrl+'/api/action/package_list'
     
-    print actionURL
     fp = urllib2.urlopen(actionURL);
     results = json.loads(fp.read());
     fp.close();
@@ -107,17 +109,28 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
     else :
         actionURL = portalUrl+'/api/3/action/package_show?id='+datasetName
     
+    
     tries = 0;
     results = None;
+    timeoutValue = 60
     while True:
         try:
-            connection = urllib2.urlopen(actionURL, timeout=60)
+            connection = urllib2.urlopen(actionURL, timeout=timeoutValue)
             xmlstring = connection.read()
             results = json.loads(xmlstring);
             break
-        except :
+        except urllib2.HTTPError as err:
+            if err.code == 403:
+                return -1
+            else:
+                tries += 1
+                timeoutValue += 20
+                if tries >= 30:
+                    exit()
+        except:
             tries += 1
-            if tries >= 10:
+            timeoutValue += 20
+            if tries >= 30:
                 exit()
     
     if (ckanVersion == 1):
@@ -176,12 +189,17 @@ def downloadFile(url, filePath):
             break
        
         except :
-            print timeoutValue
             tries += 1
             timeoutValue += 20
             if tries >= 25:
                 exit()
    
+
+def getAtributeValue(resource, key):
+    try:
+        return resource[key]
+    except KeyError as e:
+        return 'NON_EXISTS'
 
 
 def getDatasets(portalUrl, datasetDataFile):
@@ -191,47 +209,50 @@ def getDatasets(portalUrl, datasetDataFile):
     datasetID = 0
     for datasetName in results:
         datasetID += 1;
-        if (datasetID < 195) :
-            continue
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
+        
+        if (datasetMetaData == -1 or getAtributeValue(datasetMetaData,'num_resources') == 0):
+            with codecs.open('skiplist.dat', 'a+', encoding='utf-8') as arq:
+                arq.write(datasetName + "\n")
+            continue;
+        
         resources = datasetMetaData['resources'];
         
         datasetFolder = portalDatasetsFolders +"/" + str(datasetID).zfill(3);
         if not os.path.exists(datasetFolder):
             os.mkdir(datasetFolder)
     
-            
         for resource in resources:
             text = "";
             text += tab(portalId);
             text += tab(portalName);
             text += tab(portalUrl);
             text += tab(datasetID);
-            text += tab(datasetMetaData['name']);
-            text += tab(datasetMetaData['title']);
-            text += tab(resource['name']);
-            text += tab(resource['id']);
-            text += tab(resource['url']);
-            text += tab(cleanText(resource['description']))
-            text += tab(resource['format']);
-            text += tab(resource['last_modified']);
-            text += tab(resource['created']);
-            text += tab(datasetMetaData['maintainer']);
-            text += tab(datasetMetaData['maintainer_email']);
-            text += tab(datasetMetaData['author']);
-            text += tab(datasetMetaData['author_email']);
-            text += tab(datasetMetaData['state']);
-            text += tab(datasetMetaData['isopen']);
-            text += tab(datasetMetaData['metadata_created']);
-            text += tab(datasetMetaData['metadata_modified']);
-            text += tab(datasetMetaData['groups']);
-            text += tab(datasetMetaData['tags']);
-            text += tab(datasetMetaData['license_title']);
-            text += tab(resource['size']);
+            text += tab(getAtributeValue(datasetMetaData,'name'));
+            text += tab(getAtributeValue(datasetMetaData,'title'));
+            text += tab(getAtributeValue(resource,'name'));
+            text += tab(getAtributeValue(resource,'id'));
+            text += tab(getAtributeValue(resource,'url'));
+            text += tab(cleanText(getAtributeValue(resource,'description')))
+            text += tab(getAtributeValue(resource,'format'));
+            text += tab(getAtributeValue(resource,'last_modified'));
+            text += tab(getAtributeValue(resource,'created'));
+            text += tab(getAtributeValue(datasetMetaData,'maintainer'));
+            text += tab(getAtributeValue(datasetMetaData,'maintainer_email'));
+            text += tab(getAtributeValue(datasetMetaData,'author'));
+            text += tab(getAtributeValue(datasetMetaData,'author_email'));
+            text += tab(getAtributeValue(datasetMetaData,'state'));
+            text += tab(getAtributeValue(datasetMetaData,'isopen'));
+            text += tab(getAtributeValue(datasetMetaData,'metadata_created'));
+            text += tab(getAtributeValue(datasetMetaData,'metadata_modified'));
+            text += tab(getAtributeValue(datasetMetaData,'groups'));
+            text += tab(getAtributeValue(datasetMetaData,'tags'));
+            text += tab(getAtributeValue(datasetMetaData,'license_title'));
+            text += tab(getAtributeValue(resource,'size'));
             
             datasetUrl = resource['url'];
-            fileName =  datasetFolder +"/" + unicode(resource['name'].replace('/','-'))+  '.'+resource['format']
+            fileName =  datasetFolder +"/" + unicode(normalizeFileName(resource))+  '.'+resource['format']
             fileName = removeAccents(fileName) 
 
             
@@ -259,9 +280,6 @@ reader = csv.reader(f, dialect='excel', delimiter='\t')
 
 i = 0
 for row in reader:
-    if (i < 1):
-        i+=1
-        continue
     
     portalId = row[0];
     portalName = row[1];
