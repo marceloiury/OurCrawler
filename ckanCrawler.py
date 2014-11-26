@@ -209,6 +209,8 @@ def getDatasets(portalUrl, datasetDataFile):
     datasetID = 0
     for datasetName in results:
         datasetID += 1;
+        if (datasetID < 221) :
+            continue 
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
         
@@ -281,12 +283,16 @@ reader = csv.reader(f, dialect='excel', delimiter='\t')
 i = 0
 for row in reader:
     
+    if (i < 8):
+        i+=1
+        continue
+    
     portalId = row[0];
     portalName = row[1];
     portalUrl = normalizeURL(row[2]);
     
     portalDatasetsFolders = "datasets/" +portalId.zfill(2);
-
+    
     with codecs.open('datasetData.dat', 'a+', encoding='utf-8') as arq: 
     
         if not os.path.exists(portalDatasetsFolders):
@@ -295,7 +301,7 @@ for row in reader:
         print portalUrl+'/api/rest/package';
 
         getDatasets(portalUrl, arq);
-        
+
 f.close()
      
     
