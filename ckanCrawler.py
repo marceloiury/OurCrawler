@@ -42,8 +42,10 @@ class HTTPRangeHandler(urllib2.BaseHandler):
 def tab (valor):
     if (valor == None) : 
         return "\t";
+    #elif (isinstance(valor,list)) :
+    #    return ''.join(str(e) for e in valor).join('\t');
     elif (isinstance(valor,list)) :
-        return ''.join(str(e) for e in valor).join('\t');
+        return str(valor)+"\t";
     elif (not isinstance(valor,basestring)) :
         return str(valor) + "\t";
     else:
@@ -66,9 +68,14 @@ def removeAccents(input_str):
     return u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
     
 def cleanText(text):
-    text = text.replace('\n', '')
-    text = text.replace('\t', '')
-    text = text.replace('\r', '')
+    
+    if (text != None) : 
+        text = text.replace('\n', '')
+        text = text.replace('\t', '')
+        text = text.replace('\r', '')
+        
+        text = removeAccents(text)
+    
     return text
     
     
@@ -109,6 +116,7 @@ def getDatasetMetadata(portalUrl, datasetName, ckanVersion):
     else :
         actionURL = portalUrl+'/api/3/action/package_show?id='+datasetName
     
+    print actionURL
     
     tries = 0;
     results = None;
@@ -209,8 +217,6 @@ def getDatasets(portalUrl, datasetDataFile):
     datasetID = 0
     for datasetName in results:
         datasetID += 1;
-        if (datasetID < 221) :
-            continue 
         
         datasetMetaData = getDatasetMetadata(portalUrl, datasetName, ckanVersion)
         
@@ -231,9 +237,9 @@ def getDatasets(portalUrl, datasetDataFile):
             text += tab(portalName);
             text += tab(portalUrl);
             text += tab(datasetID);
-            text += tab(getAtributeValue(datasetMetaData,'name'));
-            text += tab(getAtributeValue(datasetMetaData,'title'));
-            text += tab(getAtributeValue(resource,'name'));
+            text += tab(cleanText(getAtributeValue(datasetMetaData,'name')));
+            text += tab(cleanText(getAtributeValue(datasetMetaData,'title')));
+            text += tab(cleanText(getAtributeValue(resource,'name')));
             text += tab(getAtributeValue(resource,'id'));
             text += tab(getAtributeValue(resource,'url'));
             text += tab(cleanText(getAtributeValue(resource,'description')))
@@ -271,29 +277,21 @@ def getDatasets(portalUrl, datasetDataFile):
             print text;
             datasetDataFile.write(text + "\n")
             
-            
-
-
 
 
 #with open('portais.dat', 'r') as f:
 f = open('portais.dat', 'r')
 reader = csv.reader(f, dialect='excel', delimiter='\t')
 
-i = 0
 for row in reader:
-    
-    if (i < 8):
-        i+=1
-        continue
-    
+
     portalId = row[0];
     portalName = row[1];
     portalUrl = normalizeURL(row[2]);
     
     portalDatasetsFolders = "datasets/" +portalId.zfill(2);
     
-    with codecs.open('datasetData.dat', 'a+', encoding='utf-8') as arq: 
+    with codecs.open('datasetData'+str(i)+'.3.2.dat', 'a+', encoding='utf-8') as arq: 
     
         if not os.path.exists(portalDatasetsFolders):
             os.makedirs(portalDatasetsFolders);
@@ -301,6 +299,9 @@ for row in reader:
         print portalUrl+'/api/rest/package';
 
         getDatasets(portalUrl, arq);
+    
+    break   
+    
 
 f.close()
      
