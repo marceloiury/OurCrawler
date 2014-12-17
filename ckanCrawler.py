@@ -283,15 +283,16 @@ def getDatasets(portalUrl, datasetDataFile):
 f = open('portais.dat', 'r')
 reader = csv.reader(f, dialect='excel', delimiter='\t')
 
+i = 0;
 for row in reader:
-
+    i+=1
     portalId = row[0];
     portalName = row[1];
     portalUrl = normalizeURL(row[2]);
     
     portalDatasetsFolders = "datasets/" +portalId.zfill(2);
     
-    with codecs.open('datasetData'+str(i)+'.3.2.dat', 'a+', encoding='utf-8') as arq: 
+    with codecs.open('datasetDataNew.dat', 'a+', encoding='utf-8') as arq: 
     
         if not os.path.exists(portalDatasetsFolders):
             os.makedirs(portalDatasetsFolders);
