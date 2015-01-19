@@ -1,9 +1,13 @@
 1		http://dados.rs.gov.br/	Estadual	Rio Grande do Sul	70	Sim	22/10/2014
 2		http://catalogo.seplande.al.gov.br/	Estadual	Alagoas	1081	Sim	22/10/2014
+3		http://www.dadosabertos.pe.gov.br/	Estadual	Pernambuco	33	Não	22/10/2014
 4		http://www.transparencia.dadosabertos.mg.gov.br	Estadual	Minas Gerais	5	Sim	22/10/2014
-6		http://dados.gov.br/	Federal	- 	343	Sim	22/10/2014
+5		http://www.governoaberto.sp.gov.br/view/consulta.php	Estadual	São Paulo	399	?	28/10/2014
+6		http://dados.gov.br/	Federal	Federal 	343	Sim	22/10/2014
 7		http://dadosabertos.senado.gov.br/	Federal	-	10	Sim	22/10/2014
 8		http://www.dadosabertos.df.gov.br/	Federal	Distrito Federal	16	Sim	22/10/2014
 9		http://datapoa.com.br/	Municipal	Porto Alegre	37	Sim	22/10/2014
 10		http://dados.recife.pe.gov.br/	Municipal	Recife	39	Sim	22/10/2014
-11		http://data.rio.rj.gov.br/	Municipal	Rio de Janeiro	985	Sim	22/10/2014  
+11		http://data.rio.rj.gov.br/	Municipal	Rio de Janeiro	985	Sim	22/10/2014
+12		http://www.curitiba.pr.gov.br/conteudo/dados-abertos-consulta/1498	Municipal	Curitiba	14	Não	22/10/2014
+13		http://www.prefeitura.sp.gov.br/cidade/secretarias/desenvolvimento_urbano/dados_abertos/	Municipal	São Paulo	28	Não	22/10/2014
